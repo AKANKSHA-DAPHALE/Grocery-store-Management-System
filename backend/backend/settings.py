@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-gnxi6b9l=ozxp#_a+xu^xi$o@9$15yropo#%gfg0=0#cw4@je3
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []  # Add production domain(s) when deploying
+ALLOWED_HOSTS = ['*']  # Add production domain(s) when deploying
 
 # Application definition
 
@@ -41,6 +41,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -139,11 +140,14 @@ LOGIN_REDIRECT_URL = '/home/'  # After login, the user will be redirected to the
 
 
 # CSRF Settings (optional for additional security)
-CSRF_COOKIE_SECURE = True  # Ensures CSRF cookies are only sent over HTTPS in production
-SESSION_COOKIE_SECURE = True  # Ensures session cookies are only sent over HTTPS in production
+#CSRF_COOKIE_SECURE = True  
+#SESSION_COOKIE_SECURE = True  
 
 
 # Example of custom session settings (optional)
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Use database-backed sessions
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # Session expires when browser is closed
 
+import dj_database_url
+if 'DATABASE_URL' in os.environ:
+    DATABASES['default'] = dj_database_url.parse(os.environ.get('DATABASE_URL'))

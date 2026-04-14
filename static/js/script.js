@@ -45,7 +45,7 @@ function updateCartDisplay() {
 // === Checkout Function ===
 function checkout() {
     alert('Proceeding to Checkout');
-    window.location.href = '{% url "payment-options" %}';
+    window.location.href = '/billing/';
 }
 
 // === Billing Page Display ===
