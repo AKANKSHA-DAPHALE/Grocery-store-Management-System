@@ -1,0 +1,327 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Billing - Online Grocery Store</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <style>
+        /* ... (keep all existing styles) ... */
+
+        /* Add these new styles for delete button */
+        .delete-button {
+            background: #ff5252;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s ease;
+        }
+
+        .delete-button:hover {
+            background: #ff1744;
+        }
+
+        .billing-table td {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .item-details {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .item-price {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .empty-cart {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .empty-cart p {
+            margin: 10px 0;
+        }
+
+        .continue-shopping {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            margin-top: 10px;
+        }
+
+        .continue-shopping:hover {
+            background: #45a049;
+        }
+
+        .billing-page {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .billing-container {
+            max-width: 800px;
+            margin: 40px auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+
+        .billing-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .billing-header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .billing-header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .billing-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .billing-table th {
+            background: #4CAF50;
+            color: white;
+            padding: 15px;
+            text-align: left;
+        }
+
+        .total-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: right;
+        }
+
+        .total-section p {
+            font-size: 20px;
+            color: #333;
+            margin: 0;
+        }
+
+        .total-section span {
+            font-weight: bold;
+            color: #4CAF50;
+        }
+
+        .billing-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .billing-button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .proceed-button {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .proceed-button:hover {
+            background: #45a049;
+        }
+
+        .back-button {
+            background: #f8f9fa;
+            color: #333;
+            border: 2px solid #ddd;
+        }
+
+        .back-button:hover {
+            background: #e9ecef;
+        }
+
+        .delivery-info {
+            background: #e8f5e9;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .delivery-info h3 {
+            color: #2e7d32;
+            margin-bottom: 10px;
+        }
+
+        .delivery-info p {
+            color: #666;
+            margin: 5px 0;
+        }
+
+        footer {
+            background-color: #4CAF50;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="billing-page">
+        <div class="billing-container">
+            <div class="billing-header">
+                <h1>🧾 Order Summary</h1>
+                <p>Review your order before proceeding to payment</p>
+            </div>
+
+            <div class="order-summary">
+                <h3>Order Details</h3>
+                <table class="billing-table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Price (₹)</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="billing-items">
+                        <!-- Populated with JS -->
+                    </tbody>
+                </table>
+                <div id="empty-cart-message" class="empty-cart" style="display: none;">
+                    <p>Your cart is empty</p>
+                    <a href="{% url 'home' %}" class="continue-shopping">Continue Shopping</a>
+                </div>
+            </div>
+
+            <div class="total-section">
+                <p>Total Amount: ₹<span id="billing-total">0.00</span></p>
+            </div>
+
+            <div class="delivery-info">
+                <h3>Delivery Information</h3>
+                <p> Estimated Delivery: 2-3 business days</p>
+                <p>🚚 Free delivery on orders above ₹500</p>
+            </div>
+
+            <div class="billing-buttons">
+                <button class="billing-button back-button" onclick="goBack()">
+                    Back to Store
+                </button>
+                <button class="billing-button proceed-button" onclick="goToPaymentOptions()" id="proceed-button">
+                    Proceed to Payment
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p>© 2025 Online Grocery Store</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="{% static 'js/script.js' %}"></script>
+    <script>
+        // Load cart items
+        let items = JSON.parse(localStorage.getItem('cart')) || [];
+        const tableBody = document.getElementById('billing-items');
+        const totalSpan = document.getElementById('billing-total');
+        const emptyCartMessage = document.getElementById('empty-cart-message');
+        const proceedButton = document.getElementById('proceed-button');
+
+        function updateCartDisplay() {
+            tableBody.innerHTML = '';
+            let total = 0;
+
+            if (items.length === 0) {
+                emptyCartMessage.style.display = 'block';
+                proceedButton.style.display = 'none';
+                return;
+            }
+
+            emptyCartMessage.style.display = 'none';
+            proceedButton.style.display = 'block';
+
+            items.forEach((item, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>
+                        <div class="item-details">
+                            <span>${item.name || item.product}</span>
+                        </div>
+                    </td>
+                    <td class="item-price">₹${parseFloat(item.price).toFixed(2)}</td>
+                    <td>
+                        <button class="delete-button" onclick="removeItem(${index})">
+                            Delete
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+                total += parseFloat(item.price);
+            });
+
+            totalSpan.textContent = total.toFixed(2);
+        }
+
+        function removeItem(index) {
+            if (confirm('Are you sure you want to remove this item?')) {
+                items.splice(index, 1);
+                localStorage.setItem('cart', JSON.stringify(items));
+                updateCartDisplay();
+            }
+        }
+
+        // Initial display
+        updateCartDisplay();
+
+        // Redirect to payment
+        function goToPaymentOptions() {
+            if (items.length > 0) {
+                window.location.href = "{% url 'payment' %}";
+            } else {
+                alert('Your cart is empty!');
+            }
+        }
+
+        // Add this function with your other JavaScript code
+        function goBack() {
+            window.location.href = "{% url 'home' %}";
+        }
+    </script>
+</body>
+
+</html>

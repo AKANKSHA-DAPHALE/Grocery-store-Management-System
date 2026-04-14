@@ -1,0 +1,456 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Payment - Grocery Store</title>
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+  <style>
+    .payment-container {
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 2rem;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .payment-image {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-bottom: 2rem;
+    }
+
+    .payment-method-select {
+      width: 100%;
+      padding: 1rem;
+      margin: 1rem 0;
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      background-color: #f8f9fa;
+    }
+
+    .payment-form {
+      margin-top: 2rem;
+    }
+
+    .payment-form label {
+      display: block;
+      margin: 1rem 0 0.5rem;
+      color: #333;
+      font-weight: bold;
+    }
+
+    .payment-form input,
+    .payment-form select {
+      width: 100%;
+      padding: 0.8rem;
+      margin-bottom: 1rem;
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+
+    .payment-form input:focus,
+    .payment-form select:focus {
+      border-color: #4CAF50;
+      outline: none;
+    }
+
+    .total-amount {
+      background-color: #4CAF50;
+      color: white;
+      padding: 1rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+      text-align: center;
+      font-size: 1.2rem;
+    }
+
+    .pay-button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 1rem 2rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 1rem;
+      transition: background-color 0.3s ease;
+    }
+
+    .pay-button:hover {
+      background-color: #45a049;
+    }
+
+    .payment-info {
+      background-color: #f8f9fa;
+      padding: 1rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+      color: #666;
+    }
+
+    .cart-items-list {
+      margin: 10px 0;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    .cart-item {
+      background: #f5f5f5;
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .item-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .item-name {
+      font-weight: bold;
+      color: #333;
+    }
+
+    .item-price {
+      color: #4CAF50;
+      font-size: 0.9em;
+    }
+
+    .select-item-btn {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 0.9em;
+    }
+
+    .select-item-btn:hover {
+      background: #45a049;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Header -->
+  <header>
+    <h1>💚 Online Grocery Store - Payment</h1>
+    <nav>
+      <a href="{% url 'home' %}">Home</a>
+      {% if user.is_authenticated %}
+          <a href="{% url 'logout' %}">Logout</a>
+      {% else %}
+          <a href="{% url 'login' %}">Login</a>
+      {% endif %}
+      <a href="{% url 'billing' %}">Billing</a>
+      <a href="{% url 'payment' %}">Payment</a>
+    </nav>
+  </header>
+
+  <!-- Main Section -->
+  <main class="payment-container">
+    <img src="{% static 'images/payment.jpg' %}" alt="Payment Banner" class="payment-image" />
+
+    <h2>Complete Your Payment</h2>
+
+    <div class="total-amount">
+      Total Amount: ₹<span id="total-amount">0.00</span>
+    </div>
+
+    <select id="payment-method" class="payment-method-select" onchange="showPaymentFields()">
+      <option value="card">💳 Credit/Debit Card</option>
+      <option value="upi">🏦 UPI</option>
+      <option value="cod">💵 Cash on Delivery</option>
+      <option value="netbanking">🪙 Net Banking</option>
+    </select>
+
+    <form id="payment-form" class="payment-form" onsubmit="handlePayment(event)">
+      <div id="payment-fields"></div>
+      <button type="submit" class="pay-button">Pay Now</button>
+    </form>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <p>© 2025 Online Grocery Store</p>
+  </footer>
+
+  <!-- 💬 Chatbox -->
+  <div class="chatbox" id="chatbox">
+      <div class="chat-header">
+          💬 Bargain Buddy
+          <button aria-label="Close chat" onclick="toggleChat()">✖</button>
+      </div>
+      <div class="chat-body" id="chat-body">
+          <div class="bot-msg">Hi! I see you have these items in your cart. Which one would you like to bargain for?</div>
+          <div id="cart-items-list" class="cart-items-list"></div>
+      </div>
+      <div class="chat-input">
+          <input type="text" id="user-input" placeholder="Enter your offer..." />
+          <button onclick="sendMessage()">Send</button>
+      </div>
+  </div>
+
+  <button class="open-chat" onclick="toggleChat()">💬</button>
+
+  <!-- Scripts -->
+  <script>
+    // Total Calculation
+    const totalAmountSpan = document.getElementById('total-amount');
+    const cart = JSON.parse(localStorage.getItem('cart')) || [];
+    const total = cart.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0);
+    totalAmountSpan.textContent = total.toFixed(2);
+
+    // Show payment fields dynamically
+    function showPaymentFields() {
+      const method = document.getElementById('payment-method').value;
+      const container = document.getElementById('payment-fields');
+      container.innerHTML = '';
+
+      if (method === 'card') {
+        container.innerHTML = `
+          <div class="payment-info">
+            <label>Name on Card:</label>
+            <input type="text" required placeholder="Enter cardholder name">
+            <label>Card Number:</label>
+            <input type="text" pattern="\\d{16}" required placeholder="Enter 16-digit card number">
+            <div style="display: flex; gap: 1rem;">
+              <div style="flex: 1;">
+                <label>Expiry Date:</label>
+                <input type="month" required>
+              </div>
+              <div style="flex: 1;">
+                <label>CVV:</label>
+                <input type="password" pattern="\\d{3}" required placeholder="Enter 3-digit CVV">
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (method === 'upi') {
+        container.innerHTML = `
+          <div class="payment-info">
+            <label>UPI ID:</label>
+            <input type="text" placeholder="yourname@upi" required>
+            <p style="color: #666; font-size: 0.9rem; margin-top: 0.5rem;">
+              Enter your UPI ID to proceed with the payment
+            </p>
+          </div>
+        `;
+      } else if (method === 'cod') {
+        container.innerHTML = `
+          <div class="payment-info">
+            <p>💵 You will pay ₹${total.toFixed(2)} at the time of delivery.</p>
+            <p style="color: #666; font-size: 0.9rem; margin-top: 0.5rem;">
+              Our delivery partner will collect the payment when delivering your order.
+            </p>
+          </div>
+        `;
+      } else if (method === 'netbanking') {
+        container.innerHTML = `
+          <div class="payment-info">
+            <label>Select Bank:</label>
+            <select required>
+              <option value="">Choose Bank</option>
+              <option value="sbi">State Bank of India</option>
+              <option value="hdfc">HDFC Bank</option>
+              <option value="icici">ICICI Bank</option>
+              <option value="axis">Axis Bank</option>
+              <option value="kotak">Kotak Mahindra Bank</option>
+            </select>
+            <label>User ID:</label>
+            <input type="text" required placeholder="Enter your bank user ID">
+            <label>Password:</label>
+            <input type="password" required placeholder="Enter your bank password">
+          </div>
+        `;
+      }
+    }
+
+    // Show cart items in chat
+    function showCartItems() {
+      const cartItemsList = document.getElementById('cart-items-list');
+      cartItemsList.innerHTML = '';
+      
+      if (cart.length === 0) {
+        const emptyMsg = document.createElement('div');
+        emptyMsg.className = 'bot-msg';
+        emptyMsg.textContent = "Your cart is empty. Please add some items to start bargaining!";
+        cartItemsList.appendChild(emptyMsg);
+        return;
+      }
+      
+      cart.forEach((item, index) => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'cart-item';
+        itemDiv.innerHTML = `
+          <div class="item-info">
+            <span class="item-name">${item.name || item.product}</span>
+            <span class="item-price">₹${parseFloat(item.price).toFixed(2)}</span>
+          </div>
+          <button onclick="selectItemForBargain(${index})" class="select-item-btn">Bargain for this</button>
+        `;
+        cartItemsList.appendChild(itemDiv);
+      });
+    }
+
+    // Select item for bargaining
+    let selectedItemIndex = null;
+    function selectItemForBargain(index) {
+      selectedItemIndex = index;
+      const item = cart[index];
+      const chatBody = document.getElementById("chat-body");
+      
+      const botMsg = document.createElement("div");
+      botMsg.className = "bot-msg";
+      botMsg.textContent = `Great! You're bargaining for ${item.name || item.product} (₹${parseFloat(item.price).toFixed(2)}). What's your offer?`;
+      chatBody.appendChild(botMsg);
+      
+      // Scroll to bottom
+      chatBody.scrollTop = chatBody.scrollHeight;
+    }
+
+    // Submit Payment
+    function handlePayment(event) {
+      event.preventDefault();
+      alert("✅ Payment successful! Thank you for your order.");
+      localStorage.removeItem('cart');
+      window.location.href = "{% url 'home' %}";
+    }
+
+    // Chatbox Toggle
+    let chatVisible = false;
+    function toggleChat() {
+      const chatbox = document.getElementById("chatbox");
+      chatVisible = !chatVisible;
+      chatbox.style.display = chatVisible ? "flex" : "none";
+    }
+
+    // Chatbot Bargain
+    function sendMessage() {
+      const input = document.getElementById("user-input");
+      const msg = input.value.trim();
+      if (!msg) return;
+
+      const chatBody = document.getElementById("chat-body");
+
+      const userMsg = document.createElement("div");
+      userMsg.className = "user-msg";
+      userMsg.textContent = msg;
+      chatBody.appendChild(userMsg);
+
+      const botMsg = document.createElement("div");
+      botMsg.className = "bot-msg";
+
+      // Convert message to lowercase for easier matching
+      const lowerMsg = msg.toLowerCase();
+
+      if (selectedItemIndex === null) {
+        if (lowerMsg.includes('hi') || lowerMsg.includes('hello') || lowerMsg.includes('hey')) {
+          botMsg.textContent = "👋 Hello! Please select an item from your cart to start bargaining!";
+        } else {
+          botMsg.textContent = "💬 Please select an item from your cart first by clicking the 'Bargain for this' button.";
+        }
+      } else {
+        const item = cart[selectedItemIndex];
+        const itemName = item.name || item.product;
+        const itemPrice = parseFloat(item.price);
+        
+        // Calculate min and max offer limits
+        const minOffer = Math.round(itemPrice * 0.5); // 50% of original price
+        const maxOffer = itemPrice; // Maximum offer is the original price
+        
+        if (lowerMsg.includes('accept') || lowerMsg.includes('yes') || lowerMsg.includes('ok')) {
+          if (lastCounterOffer) {
+            botMsg.textContent = `✅ Great! Your offer of ₹${lastCounterOffer} for ${itemName} has been accepted! The item will be updated in your cart.`;
+            // Update the item price in the cart
+            cart[selectedItemIndex].price = lastCounterOffer;
+            localStorage.setItem('cart', JSON.stringify(cart));
+            // Update the total amount display
+            const total = cart.reduce((sum, item) => sum + parseFloat(item.price), 0);
+            document.getElementById('total-amount').textContent = total.toFixed(2);
+            // Reset the selected item
+            selectedItemIndex = null;
+            lastCounterOffer = null;
+            // Show updated cart items
+            showCartItems();
+          } else {
+            botMsg.textContent = `💬 Please make an offer first before accepting.`;
+          }
+        } else if (!isNaN(msg)) {
+          const offer = parseInt(msg);
+          
+          if (offer < minOffer) {
+            botMsg.textContent = `❌ Sorry, I cannot accept offers below ₹${minOffer} for ${itemName}. The minimum offer is 50% of the original price.`;
+          } else if (offer > maxOffer) {
+            botMsg.textContent = `❌ That offer is too high! The maximum offer I can accept is ₹${maxOffer} for ${itemName}.`;
+          } else if (offer < itemPrice) {
+            // Calculate discount based on price range
+            let discount = 0;
+            if (itemPrice <= 50) {
+              discount = 5; // ₹5 discount for items under ₹50
+            } else if (itemPrice <= 100) {
+              discount = 10; // ₹10 discount for items under ₹100
+            } else if (itemPrice <= 200) {
+              discount = 15; // ₹15 discount for items under ₹200
+            } else {
+              discount = 20; // ₹20 discount for items over ₹200
+            }
+            
+            const counterOffer = Math.min(offer + discount, itemPrice);
+            const actualDiscount = counterOffer - offer;
+            
+            if (actualDiscount > 0) {
+              lastCounterOffer = counterOffer;
+              botMsg.textContent = `💰 For ${itemName}, I can offer you ₹${counterOffer} (₹${offer} + ₹${actualDiscount} discount). Would you like to accept this price? Type 'accept' to confirm.`;
+            } else {
+              botMsg.textContent = `💬 For ${itemName}, I can't offer a better price than ₹${itemPrice}. Would you like to try a different offer?`;
+            }
+          } else if (offer >= itemPrice) {
+            botMsg.textContent = `✅ That's a good offer for ${itemName}! Let me check with my manager and get back to you in a moment.`;
+          }
+        } else if (lowerMsg.includes('discount') || lowerMsg.includes('reduce') || lowerMsg.includes('lower')) {
+          let discountInfo = '';
+          if (itemPrice <= 50) {
+            discountInfo = 'up to ₹5';
+          } else if (itemPrice <= 100) {
+            discountInfo = 'up to ₹10';
+          } else if (itemPrice <= 200) {
+            discountInfo = 'up to ₹15';
+          } else {
+            discountInfo = 'up to ₹20';
+          }
+          botMsg.textContent = `💡 I can help you get a better price for ${itemName}! The price range is ₹${minOffer} - ₹${maxOffer}, with ${discountInfo} discount. What's your offer?`;
+        } else {
+          botMsg.textContent = `💬 For ${itemName}, please type a specific amount between ₹${minOffer} and ₹${maxOffer}.`;
+        }
+      }
+
+      chatBody.appendChild(botMsg);
+      input.value = "";
+      chatBody.scrollTop = chatBody.scrollHeight;
+    }
+
+    // Add this variable to store the last counter offer
+    let lastCounterOffer = null;
+
+    // Load fields and cart items on page load
+    window.onload = function() {
+      showPaymentFields();
+      showCartItems();
+    };
+  </script>
+</body>
+</html>
